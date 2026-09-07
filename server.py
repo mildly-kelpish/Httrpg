@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from fastapi.responses import PlainTextResponse, JSONResponse
 from sqlmodel import Field, SQLModel, create_engine, Session, select
 import tomllib  # apparently, toml is included in python now
-
+import json
 
 app = FastAPI()
 dmkey = secrets.token_urlsafe(12)
@@ -60,14 +60,22 @@ class sendobjdef(BaseModel):
     names: str
     status: str
 
+class sendmovements(BaseModel):
+        row: int
+        column: int
+        rowtwo: int
+        columntwo: int
 
-mapping = [
-    [0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0],
-]
+
+mapping = {"map":[
+    [0, 1, 2, 3, 4],
+    [1, 2, 3, 4, 5],
+    [2, 3, 4, 5, 6],
+    [3, 4, 5, 6, 7],
+    [4, 5, 6, 7, 8],
+]}
+
+messagelog = "MESSAGELOG"
 
 
 async def objlookupfunc(lookup: int):
@@ -94,9 +102,9 @@ async def connect():
 
 @app.get("/info/{objid}")
 async def objlookup(objid):
-    objectfinal = await objlookupfunc(objid)
+    objectstepone = await objlookupfunc(objid)
     return PlainTextResponse(
-        f'name="{objectfinal["name"]}"\n{objectfinal["stats"].replace("\\n", "\n")}'
+        f'name="{objectstepone["name"]}"\n{objectstepone["stats"].replace("\\n", "\n")}'
     )
 
 
@@ -113,12 +121,13 @@ async def objmake(
 @app.get("/coffee")
 async def teapot():
     """this is in entirely as a joke, clients can do whatever with it"""
-    return PlainTextResponse(status_code=418)
+    return PlainTextResponse(status_code=418) # i have a bit of a joke of adding 418 response codes to web related things i make, we cant brew coffee!
+
 
 
 @app.get("/map")
 async def mapget():
-    return PlainTextResponse(str(mapping))
+    return JSONResponse(mapping)
 
 
 @app.post("/map")
@@ -131,6 +140,8 @@ async def mapset(mappings: sendmapping, AUTH: Annotated[str | None, Cookie()] = 
         return PlainTextResponse(str(mapping))
 
 
+
+
 @app.post("/authenticate")
 async def authenticatething(authenticator: authenticateconf):
     """client will send a POST request containing what type of user it wants to authenticate as AS WELL as the (configured on server) key for said user\n
@@ -140,7 +151,7 @@ async def authenticatething(authenticator: authenticateconf):
             content = {"log": "Succesfully authenticated as DM"}
             response = JSONResponse(content=content)
             response.set_cookie(
-                key="AUTH", value=dmkey, max_age=14400
+                key="AUTH", value=dmkey, max_age=config["MAX_AGE"]
             )  # authentication stuff lasts for exactly 4 hours before you have to set a new one
             return response
         else:
@@ -155,7 +166,7 @@ async def authenticatething(authenticator: authenticateconf):
                 response.set_cookie(
                     key="PAUTH",
                     value=playerkeys[config["playerkeys"][authenticator.key]],
-                    max_age=14400,
+                    max_age=config["MAX_AGE"],
                 )
                 return response
             else:
@@ -167,3 +178,11 @@ async def authenticatething(authenticator: authenticateconf):
                 "internal server error, its likely you used the wrong key!",
                 status_code=401,
             )
+@app.get("/roll/{xdX}")        
+async def rolling(xdX):
+   dtype = range(1, int(xdX.split("d")[1]))
+   resultt = 0
+   for i in range(1, int(xdX.split("d")[0]) + 1):
+        resultt += random.choice(dtype)
+   return PlainTextResponse(str(resultt))
+
