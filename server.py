@@ -60,11 +60,11 @@ class sendobjdef(BaseModel):
     names: str
     status: str
 
-class sendmovements(BaseModel):
-        row: int
-        column: int
-        rowtwo: int
-        columntwo: int
+class sendmsg(BaseModel):
+        playerID: int
+        undername: str
+        content: str
+        
 
 
 mapping = {"map":[
@@ -75,7 +75,6 @@ mapping = {"map":[
     [4, 5, 6, 7, 8],
 ]}
 
-messagelog = "MESSAGELOG"
 
 
 async def objlookupfunc(lookup: int):
@@ -135,7 +134,7 @@ async def mapset(mappings: sendmapping, AUTH: Annotated[str | None, Cookie()] = 
     """POST an array to this to set the map that will be sent by GET requests to /map!"""
     if AUTH == dmkey:
         global mapping
-        mapping = mappings.mappng
+        mapping.update({"map":mappings.mappng})
         print(mapping)
         return PlainTextResponse(str(mapping))
 
@@ -148,7 +147,7 @@ async def authenticatething(authenticator: authenticateconf):
     why not just use Oauth?  cause i dont understand how to and im kindof scared of it"""
     if authenticator.typ == 1:
         if authenticator.key == config["DM_KEY"]:
-            content = {"log": "Succesfully authenticated as DM"}
+            content = 0
             response = JSONResponse(content=content)
             response.set_cookie(
                 key="AUTH", value=dmkey, max_age=config["MAX_AGE"]
@@ -159,14 +158,12 @@ async def authenticatething(authenticator: authenticateconf):
     if authenticator.typ == 2:
         try:
             if config["playerkeys"][authenticator.key] in range(10):
-                content = {
-                    "log": f"Succesfully authenticated as player {config['playerkeys'][authenticator.key]}"
-                }
+                content = config["playerkeys"][authenticator.key]
                 response = JSONResponse(content=content)
                 response.set_cookie(
-                    key="PAUTH",
-                    value=playerkeys[config["playerkeys"][authenticator.key]],
+                    key="AUTH",
                     max_age=config["MAX_AGE"],
+                    value=playerkeys[config["playerkeys"][authenticator.key]],
                 )
                 return response
             else:
@@ -180,9 +177,47 @@ async def authenticatething(authenticator: authenticateconf):
             )
 @app.get("/roll/{xdX}")        
 async def rolling(xdX):
-   dtype = range(1, int(xdX.split("d")[1]))
+   """rolls a dice as specified in the url"""
+   dtype = range(1, int(xdX.split("d")[1]) + 1)
    resultt = 0
    for i in range(1, int(xdX.split("d")[0]) + 1):
         resultt += random.choice(dtype)
+   with open("MESSAGELOG.txt", "a") as f:
+        f.write(f"Rolled {xdX} and got a {resultt}\n")     
    return PlainTextResponse(str(resultt))
+
+@app.post("/msg")
+async def message(messagedata: sendmsg ,AUTH: Annotated[str | None, Cookie()] = None):
+    """appends a message to the message log"""
+    if messagedata.playerID == 0:
+        if AUTH == dmkey:
+            with open("MESSAGELOG.txt", "a") as f:
+                f.write(messagedata.undername + ": " + messagedata.content.replace("_", " ") + "\n")
+        else:
+            return PlainTextResponse("unauthenticated users cannot send messages", status_code=401)    
+    else:
+        if AUTH == playerkeys[messagedata.playerID]:
+            objectsteponetwo = await objlookupfunc(messagedata.playerID)
+            with open("MESSAGELOG.txt", "a") as f:
+                f.write(objectsteponetwo["name"] + ": " + messagedata.content.replace("_", " ") + "\n")
+        else:
+            return PlainTextResponse("unauthenticated users cannot send messages", status_code=401)            
+@app.get("/msg")
+async def getmsg():
+    """gets the entire message log from MESSAGELOG.txt"""
+    content = "messages"
+    with open("MESSAGELOG.txt", "r") as f:
+        content = f.read()
+    return PlainTextResponse(content)
+@app.get("/msg/clear")
+async def clrmsg(AUTH: Annotated[str | None, Cookie()] = None):
+    """clears MESSAGELOG. be careful!"""
+    if AUTH == dmkey:
+        with open("MESSAGELOG.txt", "w") as f:
+            return PlainTextResponse("messagelog cleared!")
+    else:
+        return PlainTextResponse("people who arent the dm cannot clear the messagelog", status_code=401)        
+
+
+
 
