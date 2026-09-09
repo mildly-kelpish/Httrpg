@@ -1,8 +1,9 @@
-#define OOF_IMPL
+#include <locale>
 #include <cstdio>
 #include <iostream>
+#include <istream>
 #include <vector>
-#include "libraries/oof.h"
+#include <string>
 #include "libraries/toml.hpp"
 #include "libraries/httplib.h"
 #include "libraries/json.hpp"
@@ -12,13 +13,24 @@ using namespace std;  // yet still: i use std::endl (i technically dont even nee
 using json = nlohmann::json;
 
 
+std::string formatunder(std::string text)
+{
+    std::replace(text.begin(), text.end(), '_', ' ');
+    return text;
+}
 
-void printloop(nlohmann::json pmap) {
+
+void printloop(nlohmann::json pmap, int pltypetwo) {
   for (int i = 0; i < pmap.at("map").size(); i++) {
     cout << pmap.at("map").at(i) << std::endl; // the map must always have a "map" key.
   }
-}
+  if (pltypetwo == 1) {
+    cout << "1: inspect" << "\n" << "2: message" <<"\n"<<"3: modify map" << "\n" << "4: create new object" << "\n" << "5: roll dice" << "\n" << "6: exit" << std::endl;
+  } else {
+    cout << "1: inspect" << "\n" <<"2: message" << "\n"  << "3: roll"<< "\n" <<"4: exit" << std::endl;
+  }
 
+}
 
 
 
@@ -30,7 +42,7 @@ int main(int argc,char* argv[] ) {
     cli.addBool({"-t", "--toml"}, "configure via toml file (config.toml within same directory as program) instead of by arguments");
     cli.addBool({"-v", "--verbose"}, "dont clear screen and also log a couple extra things occasionally");
     auto args = cli.parse(); 
-    cout << oof::fg_color(oof::color{0, 210, 255}) << "HTTRPG official client v1.0" << oof::reset_formatting() << std::endl;
+    cout  << "HTTRPG official client v1.0" << std::endl;
     toml::value config;
     std::string svadress;
     int ptype;
@@ -62,12 +74,12 @@ int main(int argc,char* argv[] ) {
          cout << "loading complete!" << std::endl;
          atoken = res->get_header_value("set-cookie");
          cout << res->body << std::endl;
-         playerholder = nlohmann::json::parse(res->body).at("auth");
+         playerholder = stoi(res->body);
          clie.set_default_headers({
             {"Cookie", atoken}
          });
     } else {
-        cout << oof::fg_color(oof::color{255, 0, 0}) << "authentication failed!" << "\n" << res->body << oof::reset_formatting() << std::endl;
+        cout << "authentication failed!" << "\n" << res->body << std::endl;
         return 1;
     }
     res = clie.Get("/map");
@@ -82,9 +94,9 @@ int main(int argc,char* argv[] ) {
         if (args.getBool("verbose")) {
           cout << map.at("map").size() <<"x" << map.at("map").at(0).size() << std::endl; // orginially for testing, might as well print with verbose enabled
         }
-        printloop(map);
+        printloop(map, ptype);
     } else {
-        cout << oof::fg_color(oof::color{255, 0, 0}) << "unable to retrieve or display map!" << "\n" << res->body << oof::reset_formatting() << std::endl;
+        cout << "unable to retrieve or display map!" << "\n" << res->body  << std::endl;
         return 1;
     }
     std::string objid;
@@ -95,8 +107,13 @@ int main(int argc,char* argv[] ) {
     int exiting = 0;
     if (ptype == 1) { // ptype 1 is the DM type
       while (exiting == 0){
-        cout << "1: inspect" << "\n" << "2: message" <<"\n"<<"3: modify map" << "\n" << "4: create new object" << "\n" << "5: roll dice" << "\n" << "6: exit" << std::endl;
         cin >> choice;
+        while (cin.fail()) {
+          cout << "invalid input!!" << std::endl;
+          cin.clear();
+          cin.ignore(1000, '\n');
+          cin >> choice;
+        }
         switch (choice) { 
           case 1: // inspect
             if (!args.getBool("verbose")) {
@@ -107,31 +124,34 @@ int main(int argc,char* argv[] ) {
             if (objid == "msgl") {
               res = clie.Get("/msg");
               cout << res->body << std::endl;
-              printloop(map);
+              printloop(map, ptype);
             } else {
               res = clie.Get("/info/" + objid);
-              printloop(map);
+              printloop(map, ptype);
               cout << objid << ": " << res->body << std::endl;
             }
+            cin.ignore(1000, '\n');
             break;
           case 2: // message
             if (!args.getBool("verbose")) {
               cout << "\E[H\E[2J";
             }
-            cout << "please input message to send (or \"CLR\" to clear messagelog)" << std::endl;
+            cout << "please input message to send (or \"CLR\" to clear messagelog) (instead of spaces, use underscores, the server replaces it as nessecary)" << std::endl;
             cin >> objid;
             if (objid == "CLR") {
               res = clie.Get("/msg/clear");
-              cout << res->body << std::endl
+              cout << res->body << std::endl;
             } else {
               cout << "please input name to send message under" << std::endl;
               cin >> objn;
-              objectmake = {{"playerID", 0}, {"undername", objn}, {"content", objid}};
-              res = clie.Post("/msg", objectmake.dump(), "application.json")
+              objectmake = {{"playerID", 0},  {"content", objid}, {"undername", objn}};
+              cout << objectmake.dump() << std::endl;
+              res = clie.Post("/msg", objectmake.dump(), "application/json");
               cout << res->status << std::endl;
               
             }
-            printloop(map)
+            printloop(map, ptype);
+            cin.ignore(1000, '\n');
             break;
           case 4: // create object
             if (!args.getBool("verbose")) {
@@ -146,7 +166,8 @@ int main(int argc,char* argv[] ) {
             objectmake = {{"names", objn}, {"status", objstats}};
             res = clie.Post("/make/" + objid, objectmake.dump(), "application/json");
             cout << res->status << std::endl;
-            printloop(map);
+            printloop(map, ptype);
+            cin.ignore(1000, '\n');
             break;
           case 6: // exit
             cout << "exiting..." << std::endl;
@@ -159,24 +180,41 @@ int main(int argc,char* argv[] ) {
             cout << "enter dice to roll (must be in XdY format, d must be lowercase)" << std::endl;
             cin >> objid;
             res = clie.Get("/roll/" + objid);
-            printloop(map);
+            printloop(map, ptype);
             cout << "rolled: " <<res->body << std::endl;
+            cin.ignore(1000, '\n');
             break;
           case 3:
-              
+            if (!args.getBool("verbose")) {
+              cout << "\E[H\E[2J";
+            }
+            cout << "enter JSON string for map editing (instead of spaces, use underscores, the server replaces it as nessecary)" << std::endl; // this is the best way i could think of to do this :c
+            cout << "must follow certain formats, here is an example" << "\n" << "{\"mappng\": [[1,1,1,1,1], [1,1,1,1,1]]}" << std::endl;
+            cin >> objid;
+            objn = formatunder(objid);
+            res = clie.Post("/map", objn, "application/json");
+            cin.ignore(1000, '\n');
+            printloop(map, ptype); 
 
 
 
 
 
         }
+        res = clie.Get("/map");
+        map = nlohmann::json::parse(res->body);
       }
 
     }
     if (ptype == 2) { // ptype 2 is the PLAYER type
-      cout << "1: inspect" << "\n" <<"2: message" << "\n"  << "3: roll"<< "\n" <<"4: exit" << std::endl;
       while (exiting == 0) {
         cin >> choice;
+        while (cin.fail()) {
+          cout << "invalid input!!" << std::endl;
+          cin.clear();
+          cin.ignore(1000, '\n');
+          cin >> choice;
+        }
         switch (choice) {
           case 1:
             if (!args.getBool("verbose")) {
@@ -188,22 +226,25 @@ int main(int argc,char* argv[] ) {
               cout << "reading messagelog" << std::endl;
               res = clie.Get("/msg");
               cout << res->body << std::endl;
+              printloop(map, ptype);
             } else {
               res = clie.Get("/info/" + objid);
-              printloop(map);
+              printloop(map, ptype);
               cout << res->body << std::endl;
             }
+            cin.ignore(1000, '\n');
             break;
           case 2:
             if (!args.getBool("verbose")) {
               cout << "\E[H\E[2J";
             }
-            cout << "please input message to send" << std::endl;
+            cout << "please input message to send (instead of spaces, use underscores, the server replaces it as nessecary)" << std::endl; // c++ I DEPSISE THEE! WHY CANT cin.getline() JUST WORKK
             cin >> objid; // i really just be using objid for everything
             objectmake = {{"playerID", playerholder}, {"undername", "none"}, {"content", objid}};
             res = clie.Post("/msg", objectmake.dump(), "application/json");
             cout << res->status << std::endl;
-            printloop(map);
+            printloop(map, ptype);
+            cin.ignore(1000, '\n');
             break;
           case 3:
             if (!args.getBool("verbose")) {
@@ -211,9 +252,11 @@ int main(int argc,char* argv[] ) {
             }
             cout << "enter dice to roll (must be in XdY format, d must be lowercase)" << std::endl;
             cin >> objid;
-            res = clie.Get("/roll"+ objid);
-            printloop("map");
+            res = clie.Get("/roll/"+ objid);
+            printloop(map, ptype);
             cout << "rolled: " << res->body << std::endl;
+            cin.ignore(1000, '\n');
+            break;
 
 
           case 4:
@@ -221,6 +264,8 @@ int main(int argc,char* argv[] ) {
             exiting = 1;
             break;
         }
+        res = clie.Get("/map");
+        map = nlohmann::json::parse(res->body);        
 
       }
 
