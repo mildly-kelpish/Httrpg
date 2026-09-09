@@ -1,0 +1,7 @@
+# example config, please change these values
+DM_KEY = "DMAUTHEY"
+MAX_PLAYERS = 3
+MAX_AGE = 14400
+
+[playerkeys]
+HEFFKEY = 1 # key is defined first, the integer is what player it refers to
