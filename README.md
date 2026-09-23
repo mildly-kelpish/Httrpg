@@ -11,7 +11,9 @@ the server (portion written in python) is rather easy to set up
 1. `git clone` this repo
 2. modify the included config.toml to change what you need to change
 3. in the cloned repo, `uv run uvicorn server:app` (that is, assuming you have uv)
-4.    thats about it! <br>
+OR <br>
+1. grab the binary server from the release page
+2. run it in a terminal
 
 **as for the client:**<br>
 either get a pre built binary from the releases(`HTttrpg-client` for linux `HTttrpg-client-cosmo` for windows and mac (compiled with cosmopolitan libc)) or build it yourself
