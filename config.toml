@@ -2,6 +2,8 @@
 DM_KEY = "DMAUTHEY"
 MAX_PLAYERS = 3
 MAX_AGE = 14400
+HOST = "0.0.0.0"
+PORT = 8080 
 
 [playerkeys]
-HEFFKEY = 1 # key is defined first, the integer is what player it refers to
+TESTKEY = 1 # key is defined first, the integer is what player it refers to
