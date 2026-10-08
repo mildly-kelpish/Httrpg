@@ -12,8 +12,9 @@ the server (portion written in python) is rather easy to set up
 2. modify the included config.toml to change what you need to change
 3. in the cloned repo, `uv run uvicorn server:app` (that is, assuming you have uv)
 OR <br>
-1. grab the binary server from the release page
-2. run it in a terminal
+1. grab the binary server from the release page (either the PYAPP or the NUITKA labeled ones, they are both the same just built differently, if one doesnt work try the other¹)
+2. make sure that you have a config.toml within the same directory (in the same format as the example one in this repo)
+3. run it in a terminal
 
 **as for the client:**<br>
 either get a pre built binary from the releases(`HTttrpg-client` for linux `HTttrpg-client-cosmo` for windows and mac (compiled with cosmopolitan libc)) or build it yourself
@@ -29,5 +30,9 @@ either get a pre built binary from the releases(`HTttrpg-client` for linux `HTtt
 once you have the compiled client it has some configuration that must be done
 * on linux, create a file named `config.toml` in the same folder as your client, there is an example in the client folder on this repo
 * on windows (and presumably mac), you must use command line options, use --help for the options that must be used
+
+<hr>
+
+¹both work on my system (gentoo linux, x86_64), it appears the pyapp one requires rust and cargo to be installed, possibly uv, the nuitka one i am unsure of, one of them should work though (as long as you run it on linux and have the config file in the same directory)
 
 
