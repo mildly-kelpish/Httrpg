@@ -15,6 +15,7 @@ OR <br>
 1. grab the binary server from the release page (either the PYAPP or the NUITKA labeled ones, they are both the same just built differently, if one doesnt work try the other¹)
 2. make sure that you have a config.toml within the same directory (in the same format as the example one in this repo)
 3. run it in a terminal
+# note! the binary builds are built only for x86_64 linux!
 
 **as for the client:**<br>
 either get a pre built binary from the releases(`HTttrpg-client` for linux `HTttrpg-client-cosmo` for windows and mac (compiled with cosmopolitan libc)) or build it yourself
